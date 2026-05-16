@@ -1,0 +1,25 @@
+{
+    "max_retries": 3,
+    "request_timeout": 120,
+    "batch_size_pages": 30,
+    "batch_size_products": 70,
+    "batch_size_unquote": 250,
+    "sleep_between_batches": 3,
+    "sleep_on_cloudflare": 30,
+    "access_denied_check_interval": 60,
+    "regions":
+        [
+            {
+                "code": "en-tr",
+                "divide_price_by_100": false
+            },
+            {
+                "code": "ru-ua",
+                "divide_price_by_100": false
+            },
+            {
+                "code": "en-in",
+                "divide_price_by_100": true
+            }
+        ]
+}
