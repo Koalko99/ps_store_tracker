@@ -1,6 +1,8 @@
 from json import dumps
 from random import choice
 
+API_URL = "https://web.np.playstation.com/api/graphql/v1/op"
+
 header=lambda: choice(
     [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -111,6 +113,18 @@ page_headers = lambda: {
         "user-agent": header()
     }
 
+client_kwargs = lambda url, req_type: {
+        "page": {
+            "url": url,
+            "headers": page_headers()
+        },
+        "json": {
+            "url": API_URL,
+            "headers": json_headers(url),
+            "params": get_params(url)
+        }
+    }[req_type]
+
 def get_params(url: str):
     product_type, sku = url.split("/")[-2:]
     queries = {
@@ -148,4 +162,5 @@ def get_params(url: str):
             }
         ]
     }
+
     return queries[product_type]

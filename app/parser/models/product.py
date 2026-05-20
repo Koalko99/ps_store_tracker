@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Set
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -26,4 +26,4 @@ class Product(BaseModel):
     ea_access: bool
     discount: int
     discount_end: datetime
-    tags: set
+    tags: Set[str]

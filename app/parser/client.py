@@ -1,9 +1,9 @@
 import asyncio
 from json import loads
-from typing import List
+from typing import List, Dict, Set, Any
 import app.core.logging as logging
 from aiohttp import ClientTimeout, ClientSession, TCPConnector
-from app.parser.common import header, page_headers, json_headers, get_params
+from app.parser.common import client_kwargs
 
 class Client:
 
@@ -12,17 +12,17 @@ class Client:
                  request_timeout: float = 10,
                  connections_limit: int = 200,
                  max_retries: int = 3,
-                 sleep_on: int = 5,
+                 sleep_on_exc: int = 5,
+                 sleep_on_blocking: int = 60,
                  proxies: List[str] = None):
     
         self.session: ClientSession = None
 
-        self.API_URL = "https://web.np.playstation.com/api/graphql/v1/op"
-
         self.__proxy__ = ""
         self.__requests_count__ = 0
-        self.sleep_on = sleep_on
+        self.sleep_on_exc = sleep_on_exc
         self.max_retries = max_retries
+        self.sleep_on_blocking = sleep_on_blocking
         self._proxy_lock = asyncio.Lock()
         self.proxies = proxies or []
         
@@ -46,51 +46,52 @@ class Client:
             await self.session.close()
 
 
-    async def get_page(self, url: str):
+    async def get(self, url: str, json: bool = False) -> str | List[Any] | Dict[Any]:
 
         if self.__requests_count__ % self.batch_size == 0:
             self.__proxy__ = await self._get_proxy()
 
         counter = 0
         
+        request_type = "page" if json == False else "json"
+
+        request_kwargs = client_kwargs(url, request_type)
+
         while counter < self.max_retries:
             try:
-                async with self.session.get(url, headers=page_headers(), proxy=self.__proxy__) as resp:
-                    return await resp.text()
-            except (asyncio.CancelledError, KeyboardInterrupt):
-                return []
-            except:
-                counter += 1
-                await asyncio.sleep(self.sleep_on)
-        else:
-            return []
-
-
-    async def get_json(self, url: str):
-
-        if self.__requests_count__ % self.batch_size == 0:
-            self.__proxy__ = await self._get_proxy()
-
-        counter = 0
-        
-        while counter < self.max_retries:
-            try:
-                async with self.session.get(self.API_URL, headers=json_headers(url), params=get_params(url), proxy=self.__proxy__) as resp:
+                async with self.session.get(proxy=self.__proxy__, **request_kwargs) as resp:
                     text = await resp.text()
-                
-                return loads(text)
+                    
+                    if "You don't have permission to access" in text:
+                        counter = 0
+                        self.__proxy__ = await self._get_proxy()
+
+                        await asyncio.sleep(self.sleep_on_blocking)
+                        continue
+
+                    if request_type == "json":
+                        text = loads(text)
+
+                    return text
 
             except (asyncio.CancelledError, KeyboardInterrupt):
-                return []
+                return ""
             except:
                 counter += 1
-                await asyncio.sleep(self.sleep_on)
+                await asyncio.sleep(self.sleep_on_exc)
         else:
-            return []
+            return ""
+
+
+    async def get_with_flag(self, flag: str, **kwargs) -> Set[str, Any]:
+        data = await self.get(**kwargs)
+        return flag, data
 
     async def _get_proxy(self) -> str | None:
         if not self.proxies:
             return None
+
+        self.logger.warning("Setting new proxy")
 
         async with self._proxy_lock:
             proxy = self.proxies[self.proxy_index]
@@ -101,3 +102,14 @@ class Client:
                 self.proxy_index = 0
 
             return proxy
+
+    async def _refresh_session(self) -> None:
+        if self.session:
+            await self.session.close()
+
+        self.logger.warning("Refreshing the session")
+
+        self.session = self.session = ClientSession(
+            timeout=self.timeout,
+            connector=TCPConnector(limit=self.connections_limit)
+        )
