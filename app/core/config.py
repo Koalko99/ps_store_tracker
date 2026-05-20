@@ -17,14 +17,14 @@ class Config:
                     config = json.loads(file.read())
                 
                 self.REGIONS = []
-
+                self.PROXIES = [""]
                 self.MAX_RETRIES = config.get('max_retries', 3)
                 self.REQUEST_TIMEOUT = config.get('request_timeout', 120)
                 self.BATCH_SIZE_PAGES = config.get('batch_size_pages', 30)
-                self.BATCH_SIZE_PRODUCTS = config.get('batch_size_products', 70)
+                self.CONNECTIONS_LIMIT = config.get('connections_limit', 200)
                 self.BATCH_SIZE_UNQUOTE = config.get('batch_size_unquote', 250)
+                self.BATCH_SIZE_PRODUCTS = config.get('batch_size_products', 70)
                 self.SLEEP_BETWEEN_BATCHES = config.get('sleep_between_batches', 3)
-                self.SLEEP_ON_CLOUDFLARE = config.get('sleep_on_cloudflare', 30)
                 self.ACCESS_DENIED_CHECK_INTERVAL = config.get('access_denied_check_interval', 60)
 
                 for region in config.get("regions", []):
@@ -51,6 +51,11 @@ class Config:
                             }
                         )
 
+                for proxy in config.get("PROXIES", []):
+
+                    if proxy.startswith("http"):
+                        self.PROXIES.append(proxy)
+
             except Exception:
                 self.logger.exception("Config error")
                 self.set_defaults()
@@ -63,8 +68,8 @@ class Config:
         self.MAX_RETRIES = 3
         self.REQUEST_TIMEOUT = 120
         self.BATCH_SIZE_PAGES = 30
-        self.BATCH_SIZE_PRODUCTS = 70
+        self.CONNECTIONS_LIMIT = 200
         self.BATCH_SIZE_UNQUOTE = 250
+        self.BATCH_SIZE_PRODUCTS = 70
         self.SLEEP_BETWEEN_BATCHES = 3
-        self.SLEEP_ON_CLOUDFLARE = 30
         self.ACCESS_DENIED_CHECK_INTERVAL = 60

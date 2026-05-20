@@ -5,7 +5,7 @@
     "batch_size_products": 70,
     "batch_size_unquote": 250,
     "sleep_between_batches": 3,
-    "sleep_on_cloudflare": 30,
+    "connections_limit": 200,
     "access_denied_check_interval": 60,
     "regions":
         [
