@@ -22,6 +22,7 @@ class Config:
                 self.REQUEST_TIMEOUT = config.get('request_timeout', 120)
                 self.BATCH_SIZE_PAGES = config.get('batch_size_pages', 30)
                 self.CONNECTIONS_LIMIT = config.get('connections_limit', 200)
+                self.SLEEP_ON_EXCEPTION = config.get('sleep_on_exception', 5)
                 self.BATCH_SIZE_UNQUOTE = config.get('batch_size_unquote', 250)
                 self.BATCH_SIZE_PRODUCTS = config.get('batch_size_products', 70)
                 self.SLEEP_BETWEEN_BATCHES = config.get('sleep_between_batches', 3)
@@ -68,6 +69,7 @@ class Config:
         self.MAX_RETRIES = 3
         self.REQUEST_TIMEOUT = 120
         self.BATCH_SIZE_PAGES = 30
+        self.SLEEP_ON_EXCEPTION = 5
         self.CONNECTIONS_LIMIT = 200
         self.BATCH_SIZE_UNQUOTE = 250
         self.BATCH_SIZE_PRODUCTS = 70
