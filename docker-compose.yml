@@ -1,0 +1,7 @@
+services:
+  app:
+    build: .
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./logs:/app/logs
+    command: ["ps-store-tracker", "collect", "--region", "ru-ua"]

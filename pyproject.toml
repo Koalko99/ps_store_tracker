@@ -25,6 +25,9 @@ dev = [
     "ruff>=0.12.0",
 ]
 
+[project.scripts]
+ps-store-tracker = "app.main:main"
+
 [project.urls]
 Homepage = "https://github.com/Koalko99/ps_store_tracker"
 Repository = "https://github.com/Koalko99/ps_store_tracker"
@@ -32,3 +35,21 @@ Repository = "https://github.com/Koalko99/ps_store_tracker"
 [build-system]
 requires = ["setuptools>=80.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["logs*", "tests*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
