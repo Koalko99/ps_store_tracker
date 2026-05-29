@@ -1,7 +1,7 @@
 import logging
 import sys
-from pathlib import Path
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
@@ -41,13 +41,13 @@ class ColoredFormatter(logging.Formatter):
 
 
 def setup_logging(
-        level: int = logging.INFO,
-        log_file: str = "app.log",
-    ) -> None:
+    level: int | str = logging.INFO,
+    log_file: str = "app.log",
+) -> None:
 
 
     logger = logging.getLogger()
-    logger.setLevel(level)
+    logger.setLevel(logging.getLevelName(level.upper()) if isinstance(level, str) else level)
 
     if logger.handlers:
         logger.handlers.clear()

@@ -1,77 +1,71 @@
-import os
+from __future__ import annotations
+
 import json
-import app.core.logging as logging
+from pathlib import Path
+from typing import Any
 
-class Config:
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
-    def __init__(self, config_path: str = ""):
+from app.core.logging import get_logger
 
-        self.logger = logging.get_logger(__name__)
 
-        if not config_path or not os.path.exists(self.CONFIG_FILE):
-            self.logger.warning("Cannot load data from config file")
-            self.set_defaults()
-        else:
-            try:
-                with open(config_path, "r") as file:
-                    config = json.loads(file.read())
-                
-                self.REGIONS = []
-                self.PROXIES = [""]
-                self.MAX_RETRIES = config.get('max_retries', 3)
-                self.REQUEST_TIMEOUT = config.get('request_timeout', 120)
-                self.BATCH_SIZE_PAGES = config.get('batch_size_pages', 30)
-                self.CONNECTIONS_LIMIT = config.get('connections_limit', 200)
-                self.SLEEP_ON_EXCEPTION = config.get('sleep_on_exception', 5)
-                self.BATCH_SIZE_UNQUOTE = config.get('batch_size_unquote', 250)
-                self.BATCH_SIZE_PRODUCTS = config.get('batch_size_products', 70)
-                self.SLEEP_BETWEEN_BATCHES = config.get('sleep_between_batches', 3)
-                self.ACCESS_DENIED_CHECK_INTERVAL = config.get('access_denied_check_interval', 60)
+class RegionSettings(BaseModel):
+    code: str = Field(pattern=r"^[a-z]{2}-[a-z]{2}$")
+    divide_price_by_100: bool = False
 
-                for region in config.get("regions", []):
-                    
-                    code = None
-                    divide_price_by_100 = None
-                    
-                    if "code" in region:
-                        tmp = region.get("code")
-                        if len(tmp) == 5:
-                            if tmp[2] == '-':
-                                code = tmp
-                    
-                    if "divide_price_by_100" in region:
-                        tmp = region.get("divide_price_by_100")
-                        if isinstance(tmp, bool):
-                            divide_price_by_100 = tmp
-                    
-                    if code is not None and divide_price_by_100 is not None:
-                        self.REGIONS.append(
-                            {
-                                "code": code,
-                                "divide_price_by_100": divide_price_by_100
-                            }
-                        )
 
-                for proxy in config.get("PROXIES", []):
+class AppSettings(BaseModel):
+    max_retries: int = Field(default=3, ge=1)
+    request_timeout: float = Field(default=120, gt=0)
+    batch_size_pages: int = Field(default=30, ge=1)
+    batch_size_products: int = Field(default=70, ge=1)
+    batch_size_unquote: int = Field(default=250, ge=1)
+    sleep_between_batches: float = Field(default=3, ge=0)
+    connections_limit: int = Field(default=300, ge=1)
+    sleep_on_exception: float = Field(default=5, ge=0)
+    access_denied_check_interval: float = Field(default=60, ge=0)
+    inf_batch: int = Field(default=10**18, ge=1)
+    regions: list[RegionSettings] = Field(
+        default_factory=lambda: [
+            RegionSettings(code="ru-ua", divide_price_by_100=False),
+        ],
+    )
+    proxies: list[str] = Field(default_factory=list)
 
-                    if proxy.startswith("http"):
-                        self.PROXIES.append(proxy)
+    @field_validator("proxies")
+    @classmethod
+    def validate_proxies(cls, value: list[str]) -> list[str]:
+        return [proxy for proxy in value if proxy.startswith(("http://", "https://"))]
 
-            except Exception:
-                self.logger.exception("Config error")
-                self.set_defaults()
-            
+    @property
+    def region_codes(self) -> list[str]:
+        return [region.code for region in self.regions]
 
-    def set_defaults(self):
-        
-        self.logger.info("Set default config")
 
-        self.MAX_RETRIES = 3
-        self.REQUEST_TIMEOUT = 120
-        self.BATCH_SIZE_PAGES = 30
-        self.SLEEP_ON_EXCEPTION = 5
-        self.CONNECTIONS_LIMIT = 200
-        self.BATCH_SIZE_UNQUOTE = 250
-        self.BATCH_SIZE_PRODUCTS = 70
-        self.SLEEP_BETWEEN_BATCHES = 3
-        self.ACCESS_DENIED_CHECK_INTERVAL = 60
+
+def load_settings(config_path: str | Path = "config.json") -> AppSettings:
+    logger = get_logger(__name__)
+
+    data: dict[str, Any] = {}
+    path = Path(config_path)
+
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            msg = f"Invalid JSON config file: {path}"
+            raise RuntimeError(msg) from exc
+    else:
+        logger.warning("Config file does not exist, using defaults: %s", path)
+
+    if "PROXIES" in data and "proxies" not in data:
+        data["proxies"] = data.pop("PROXIES")
+
+    try:
+        return AppSettings.model_validate(data)
+    except ValidationError as exc:
+        msg = f"Invalid application settings in {path}"
+        raise RuntimeError(msg) from exc
+
+
+Config = AppSettings
